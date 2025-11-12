@@ -48,16 +48,31 @@ def open_booked_tests(page: CorePage):
     wait_for_loader(page)
     
 def get_booked_date(page: CorePage):
-    page.wait_for_selector("div.card-item.borderless p:has(i.fa-clock)", timeout=15000)
-    p_elem = page.query_selector("div.card-item.borderless p:has(i.fa-clock)")
-    date_text = p_elem.inner_text().replace("\xa0", " ").strip()
-    print("Booked date:", date_text)
-    return date_text
+    page.wait_for_selector("div.card-item.borderless", timeout=15000)
+    cards = page.query_selector_all("div.card-item.borderless")
+    for card in cards:
+        heading = card.query_selector("h2")
+        if heading and "Körprov TAXI" in heading.inner_text():
+            p_elem = card.query_selector("p:has(i.fa-clock)")
+            if p_elem:
+                date_text = p_elem.inner_text().replace("\xa0", " ").strip()
+                print("Booked date:", date_text)
+                return date_text
+    return None
 
 def open_ombooking(page: CorePage):
-    page.wait_for_selector("#id-button-canReschedule", timeout=20000)
-    page.click("#id-button-canReschedule")
-    wait_for_loader(page)
+    page.wait_for_selector("div.card-item.borderless", timeout=20000)
+    cards = page.query_selector_all("div.card-item.borderless")
+    for card in cards:
+        heading = card.query_selector("h2")
+        if heading and "Körprov TAXI" in heading.inner_text():
+            button = card.query_selector("#id-button-canReschedule")
+            if button:
+                button.click()
+                wait_for_loader(page)
+                return True
+    return False
+
 
 def select_city(page: CorePage):
     city_name = options.CITY
@@ -113,10 +128,6 @@ def rebook_first_available(page: CorePage):
     wait_for_loader(page)
     page.wait_for_selector("button#pay-invoice-button", timeout=15000)
     page.query_selector("button#pay-invoice-button").click()
-
-    print("Waiting")
-    time.sleep(20)
-    print("Start Again")
 
     wait_for_loader(page)
     page.wait_for_selector("app-contact-details-dialog button.btn.btn-primary", timeout=15000)
