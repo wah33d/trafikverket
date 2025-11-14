@@ -17,14 +17,14 @@ def wait_for_loader(page: CorePage):
     time.sleep(2)
 
 def login(page: CorePage):
-    stop_event = threading.Event()
-    beep_thread = threading.Thread(target=start_beeping, args=(stop_event,))
-    beep_thread.start()
-
     logout_exists = page.query_selector("#desktop-logout-button")
     if logout_exists:
         stop_event.set()
         return
+
+    stop_event = threading.Event()
+    beep_thread = threading.Thread(target=start_beeping, args=(stop_event,))
+    beep_thread.start()
 
     login_button = page.query_selector("#desktop-login-button")
     if login_button:
@@ -114,7 +114,7 @@ def get_earliest_date(page: CorePage):
 def compare_dates(available_date_str: str, target_date_str: str):
     available_date = datetime.strptime(available_date_str, "%Y-%m-%d %H:%M")
     target_date = datetime.strptime(target_date_str, "%Y-%m-%d %H:%M")
-    return available_date > target_date
+    return available_date < target_date
 
 def rebook_first_available(page: CorePage):
     page.wait_for_selector("div.panel.mb-3", timeout=15000)
