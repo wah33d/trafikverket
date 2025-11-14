@@ -17,15 +17,16 @@ def wait_for_loader(page: CorePage):
     time.sleep(2)
 
 def login(page: CorePage):
+    stop_event = threading.Event()
+    beep_thread = threading.Thread(target=start_beeping, args=(stop_event,))
+
     logout_exists = page.query_selector("#desktop-logout-button")
     if logout_exists:
         stop_event.set()
         return
-
-    stop_event = threading.Event()
-    beep_thread = threading.Thread(target=start_beeping, args=(stop_event,))
+    
     beep_thread.start()
-
+    
     login_button = page.query_selector("#desktop-login-button")
     if login_button:
         login_button.click()
