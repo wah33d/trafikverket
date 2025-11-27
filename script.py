@@ -53,7 +53,7 @@ def get_booked_date(page: CorePage):
     cards = page.query_selector_all("div.card-item.borderless")
     for card in cards:
         heading = card.query_selector("h2")
-        if heading and "Körprov TAXI" in heading.inner_text():
+        if heading and options.TEST in heading.inner_text():
             p_elem = card.query_selector("p:has(i.fa-clock)")
             if p_elem:
                 date_text = p_elem.inner_text().replace("\xa0", " ").strip()
@@ -66,14 +66,13 @@ def open_ombooking(page: CorePage):
     cards = page.query_selector_all("div.card-item.borderless")
     for card in cards:
         heading = card.query_selector("h2")
-        if heading and "Körprov TAXI" in heading.inner_text():
+        if heading and options.TEST in heading.inner_text():
             button = card.query_selector("#id-button-canReschedule")
             if button:
                 button.click()
                 wait_for_loader(page)
                 return True
     return False
-
 
 def select_city(page: CorePage):
     city_name = options.CITY
@@ -159,16 +158,18 @@ def main():
                 rebook_first_available(page)
                 print(f"New Date Booked")
             else:
-                print(f"Can not be booked. Retrying after 15 seconds")
+                print(f"Cannot be booked. Retrying after 15 seconds")
                 time.sleep(15)
 
     except KeyboardInterrupt:
         print("\nKeyboardInterrupt received. Exiting...")
 
     finally:
-        page._browser.close()
-        page._playwright.stop()
+        # Safe close - avoids crash if already closed
+        try:
+            page.close()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()
-
