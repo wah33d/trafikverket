@@ -8,7 +8,7 @@ PROGRAM_FILES = os.getenv("PROGRAMFILES", "")
 
 # --- Browser executable paths ---
 EDGE_EXECUTABLE_PATH = os.path.join(PROGRAM_X86, "Microsoft", "Edge", "Application", "msedge.exe")
-CHROME_EXECUTABLE_PATH = os.path.join(PROGRAM_X86, "Google", "Chrome", "Application", "chrome.exe")
+CHROME_EXECUTABLE_PATH = os.path.join(PROGRAM_FILES, "Google", "Chrome", "Application", "chrome.exe")
 CHROMIUM_EXECUTABLE_PATH = os.path.join(PROGRAM_FILES, "Google", "Chromium", "chrome.exe")
 
 # --- Browser user data directories ---
@@ -18,7 +18,7 @@ CHROMIUM_USER_DATA_DIR = os.path.join(LOCALAPP, "Google", "Chromium", "User Data
 
 # --- Global settings ---
 HEADLESS = False
-DEFAULT_BROWSER = "chromium"  # Options: "chrome", "edge", "chromium"
+DEFAULT_BROWSER = "edge"  # Options: "chrome", "edge", "chromium"
 
 
 user32 = ctypes.windll.user32
