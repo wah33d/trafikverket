@@ -144,7 +144,6 @@ def main():
             login(page)
             open_booked_tests(page)
 
-            time.sleep(200)
             booked_date = get_booked_date(page)
             open_ombooking(page)
             select_city(page)
