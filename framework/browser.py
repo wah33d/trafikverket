@@ -5,11 +5,12 @@ from framework.config import (
     EDGE_EXECUTABLE_PATH,
     CHROME_EXECUTABLE_PATH,
     CHROMIUM_EXECUTABLE_PATH,
+    EDGE_USER_DATA_DIR,
+    CHROME_USER_DATA_DIR,
+    CHROMIUM_USER_DATA_DIR,
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
 )
-import os
-from pathlib import Path
 import subprocess
 
 BROWSER_WIDTH = SCREEN_WIDTH - 150
@@ -17,60 +18,64 @@ BROWSER_HEIGHT = SCREEN_HEIGHT - 150
 
 
 # Optional: kill browser process
-def kill_browser(process_name):
+def kill_browser(process_name: str):
     try:
         subprocess.run(
             ["taskkill", "/f", "/im", process_name],
             check=False,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
         print(f"All running {process_name} processes killed.")
     except Exception as e:
         print(f"Failed to kill {process_name}: {e}")
 
 
-def get_safe_profile_dir(browser_name: str) -> str:
-    """
-    Returns a safe, persistent, Playwright-only user data directory.
-    Stored in AppData\Local\PlaywrightProfiles\<browser>.
-    """
-    base = Path(os.getenv("LOCALAPPDATA")) / "PlaywrightProfiles" / browser_name
-    base.mkdir(parents=True, exist_ok=True)
-    return str(base)
-
-
 def launch_browser(browser_choice: str = DEFAULT_BROWSER):
     p = sync_playwright().start()
     browser_choice = browser_choice.lower()
 
-    # Browser executable paths + process names
+    # Browser configuration:
+    # executable path, process name, REAL user data directory
     browser_configs = {
-        "chrome":   (CHROME_EXECUTABLE_PATH, "chrome.exe"),
-        "edge":     (EDGE_EXECUTABLE_PATH,  "msedge.exe"),
-        "chromium": (CHROMIUM_EXECUTABLE_PATH, "chrome.exe"),
+        "chrome": (
+            CHROME_EXECUTABLE_PATH,
+            "chrome.exe",
+            CHROME_USER_DATA_DIR,
+        ),
+        "edge": (
+            EDGE_EXECUTABLE_PATH,
+            "msedge.exe",
+            EDGE_USER_DATA_DIR,
+        ),
+        "chromium": (
+            CHROMIUM_EXECUTABLE_PATH,
+            "chrome.exe",
+            CHROMIUM_USER_DATA_DIR,
+        ),
     }
 
     if browser_choice not in browser_configs:
         p.stop()
         raise ValueError(f"Unknown browser: {browser_choice}")
 
-    executable_path, process_name = browser_configs[browser_choice]
+    executable_path, process_name, user_data_dir = browser_configs[browser_choice]
 
-    # Safe Playwright profile directory (NOT real Windows profile)
-    user_data_dir = get_safe_profile_dir(browser_choice)
-
-    print(f"\nLaunching {browser_choice} with Playwright profile:")
+    print(f"\nLaunching {browser_choice} with REAL browser profile:")
     print(user_data_dir, "\n")
 
+    # IMPORTANT:
+    # Make sure browser is not already running with the same profile
+    kill_browser(process_name)
+
     browser = p.chromium.launch_persistent_context(
-        user_data_dir=user_data_dir,
+        user_data_dir=user_data_dir,   # ✅ REAL profile
         executable_path=executable_path,
         headless=HEADLESS,
         args=[
             f"--window-size={BROWSER_WIDTH},{BROWSER_HEIGHT}",
             "--disable-dev-shm-usage",
-            "--no-sandbox"
+            "--no-sandbox",
         ],
         ignore_default_args=["--enable-automation"],
         viewport={"width": BROWSER_WIDTH, "height": BROWSER_HEIGHT},

@@ -75,7 +75,9 @@ def open_ombooking(page: CorePage):
     return False
 
 def select_city(page: CorePage):
-    city_name = options.CITY
+    # Split comma-separated cities and clean whitespace
+    city_names = [c.strip() for c in options.CITY.split(",") if c.strip()]
+
     print(f"Opening city selection popup ...")
     page.wait_for_selector('button[id="select-location-search"]', timeout=20000).click()
     wait_for_loader(page)
@@ -83,22 +85,33 @@ def select_city(page: CorePage):
     page.wait_for_selector("app-location-select-dialog", timeout=20000)
     wait_for_loader(page)
 
-    orebro_button = page.query_selector(f"button.select-item:has-text('{city_name}')")
-    classes = orebro_button.get_attribute("class")
-    if "selected" not in classes:
-        print(f"{city_name} not selected, selecting now...")
-        orebro_button.click()
-        wait_for_loader(page)
-    else:
-        print(f"{city_name} already selected.")
+    for city_name in city_names:
+        city_button = page.query_selector(f"button.select-item:has-text('{city_name}')")
+        if not city_button:
+            print(f"City not found: {city_name}")
+            continue
+
+        classes = city_button.get_attribute("class") or ""
+        if "selected" not in classes:
+            print(f"{city_name} not selected, selecting now...")
+            city_button.click()
+            wait_for_loader(page)
+        else:
+            print(f"{city_name} already selected.")
 
     confirm_button = page.query_selector("button.btn.btn-primary:has-text('Bekräfta')")
     confirm_button.click()
     page.wait_for_selector("app-location-select-dialog", state="detached", timeout=20000)
     wait_for_loader(page)
-    print(f"{city_name} selection confirmed.")
+
+    print(f"City selection confirmed: {', '.join(city_names)}")
+
 
 def select_car(page: CorePage):
+    if options.TYPE.lower() == "theori":
+        print("Theory test selected. No car booking needed.")
+        return
+
     car_name = options.CAR
     print("Selecting car type...")
     select_elem = page.wait_for_selector("#vehicle-select", timeout=20000)
@@ -106,15 +119,38 @@ def select_car(page: CorePage):
     wait_for_loader(page)
     print(f"{car_name} selected.")
 
-def get_earliest_date(page: CorePage):
-    page.wait_for_selector("#results-desktop strong", timeout=30000)
-    first_time_text = page.query_selector("#results-desktop strong").inner_text().replace("\xa0", " ")
-    return first_time_text
 
-def compare_dates(available_date_str: str, target_date_str: str):
+def get_earliest_date(page: CorePage):
+    selector = "#results-desktop strong"
+    page.wait_for_selector(selector, timeout=30000)
+    
+    full_text = page.inner_text(selector)
+    parts = full_text.split()
+    
+    date_str = " ".join(parts[1:]).replace(",", "")
+    
+    months = {
+        "jan": "01", "feb": "02", "mar": "03", "apr": "04",
+        "maj": "05", "jun": "06", "jul": "07", "aug": "08",
+        "sep": "09", "okt": "10", "nov": "11", "dec": "12"
+    }
+    
+    day, month_name, year, time = date_str.split()
+    month = months[month_name.lower()[:3]]
+    
+    dt = datetime.strptime(f"{year}-{month}-{day.zfill(2)} {time}", "%Y-%m-%d %H:%M")
+    return dt.strftime("%Y-%m-%d %H:%M")
+
+def compare_dates(available_date_str: str, target_date_str: str, earliest_allowed_str: str):
     available_date = datetime.strptime(available_date_str, "%Y-%m-%d %H:%M")
     target_date = datetime.strptime(target_date_str, "%Y-%m-%d %H:%M")
+    earliest_allowed = datetime.strptime(earliest_allowed_str, "%Y-%m-%d %H:%M")
+
+    if available_date < earliest_allowed:
+        return False
+
     return available_date < target_date
+
 
 def rebook_first_available(page: CorePage):
     page.wait_for_selector("div.panel.mb-3", timeout=15000)
@@ -150,10 +186,13 @@ def main():
             select_car(page)
 
             available_date = get_earliest_date(page)
-            bookable = compare_dates(available_date, booked_date)
+            earliest_allowed = options.EARLIEST_DATE
+            bookable = compare_dates(available_date, booked_date, earliest_allowed)
 
             print(f"Already Booked Date : {booked_date}")
             print(f"Earliest Next : {available_date}")
+            print(f"Earliest Allowed : {earliest_allowed}")
+
 
             if bookable:
                 rebook_first_available(page)
